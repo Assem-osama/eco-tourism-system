@@ -15,7 +15,13 @@ function require_guide_or_admin()
     require_login();
     global $loggedInUser;
 
-    $role = $loggedInUser->role ?? "";
+    // Verify that $loggedInUser is a valid object before checking role
+    if (!is_object($loggedInUser) || empty($loggedInUser->role)) {
+        header("Location: index.php?action=dashboard&error=" . urlencode("Access denied."));
+        exit;
+    }
+
+    $role = $loggedInUser->role;
     if ($role !== "guide" && $role !== "admin") {
         header("Location: index.php?action=dashboard&error=" . urlencode("Access denied."));
         exit;
@@ -28,7 +34,8 @@ function require_admin()
     require_login();
     global $loggedInUser;
 
-    if (($loggedInUser->role ?? "") !== "admin") {
+    // Ensure the user is an admin
+    if (!is_object($loggedInUser) || $loggedInUser->role !== "admin") {
         header("Location: index.php?action=dashboard&error=" . urlencode("Access denied."));
         exit;
     }

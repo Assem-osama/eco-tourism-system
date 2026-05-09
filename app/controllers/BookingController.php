@@ -63,6 +63,14 @@ class BookingController
             exit;
         }
 
+        if (!empty($tripRow["equipment_total"])) {
+            if ($capacityRow["total"] >= $tripRow["equipment_total"]) {
+                header("Location: index.php?action=trip_detail&id=$tripId&error=" . urlencode("No equipment available."));
+                exit;
+            }
+        }
+
+
         // All checks passed — create the booking
         $totalPrice = $tripRow["price"];
 

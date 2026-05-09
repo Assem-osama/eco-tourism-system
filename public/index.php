@@ -1,57 +1,176 @@
 <?php
 
-// ── Load Models 
-require_once __DIR__ . "/../app/models/User.php";
-require_once __DIR__ . "/../app/models/Guide.php";
-require_once __DIR__ . "/../app/models/Trip.php";
-require_once __DIR__ . "/../app/models/Booking.php";
-require_once __DIR__ . "/../app/models/Review.php";
+/*
+|--------------------------------------------------------------------------
+| Application Environment
+|--------------------------------------------------------------------------
+| Set to:
+| development = show errors
+| production  = hide errors
+|--------------------------------------------------------------------------
+*/
 
-session_start();
+define('APP_ENV', 'development');
 
-require_once __DIR__ . "/../config/database.php";
-require_once __DIR__ . "/../app/helpers/auth_guard.php";
+/*
+|--------------------------------------------------------------------------
+| Error Handling
+|--------------------------------------------------------------------------
+*/
 
-// ── Global User Handling
+if (APP_ENV === 'development') {
+
+    ini_set('display_errors', 1);
+
+    ini_set('display_startup_errors', 1);
+
+    error_reporting(E_ALL);
+} else {
+
+    ini_set('display_errors', 0);
+
+    error_reporting(0);
+}
+
+/*
+|--------------------------------------------------------------------------
+| Session Handling
+|--------------------------------------------------------------------------
+*/
+
+if (session_status() === PHP_SESSION_NONE) {
+
+    session_start();
+}
+
+/*
+|--------------------------------------------------------------------------
+| Security Headers
+|--------------------------------------------------------------------------
+*/
+
+header('X-Frame-Options: SAMEORIGIN');
+
+header('X-Content-Type-Options: nosniff');
+
+header('Referrer-Policy: strict-origin-when-cross-origin');
+
+/*
+|--------------------------------------------------------------------------
+| Load Models
+|--------------------------------------------------------------------------
+| Models contain DATA ONLY
+|--------------------------------------------------------------------------
+*/
+
+require_once __DIR__ . '/../app/models/User.php';
+
+require_once __DIR__ . '/../app/models/Guide.php';
+
+require_once __DIR__ . '/../app/models/Trip.php';
+
+require_once __DIR__ . '/../app/models/Booking.php';
+
+require_once __DIR__ . '/../app/models/Review.php';
+
+/*
+|--------------------------------------------------------------------------
+| Database Connection
+|--------------------------------------------------------------------------
+*/
+
+require_once __DIR__ . '/../config/database.php';
+
+/*
+|--------------------------------------------------------------------------
+| Helpers
+|--------------------------------------------------------------------------
+*/
+
+require_once __DIR__ . '/../app/helpers/auth_guard.php';
+
+/*
+|--------------------------------------------------------------------------
+| Global Logged-In User
+|--------------------------------------------------------------------------
+*/
+
 $loggedInUser = null;
 
-if (!empty($_SESSION["user_id"])) {
-    $stmt = $databaseConnection->prepare("SELECT * FROM users WHERE id = ? LIMIT 1");
-    $stmt->execute([$_SESSION["user_id"]]);
-    $userRow = $stmt->fetch();
+if (!empty($_SESSION['user_id'])) {
+
+    $userStatement = $databaseConnection->prepare(
+        "
+        SELECT *
+        FROM users
+        WHERE id = ?
+        LIMIT 1
+        "
+    );
+
+    $userStatement->execute([
+        $_SESSION['user_id']
+    ]);
+
+    $userRow = $userStatement->fetch(PDO::FETCH_ASSOC);
+
+    /*
+    |--------------------------------------------------------------------------
+    | Restore Logged In User
+    |--------------------------------------------------------------------------
+    */
 
     if ($userRow) {
+
         $loggedInUser = new User();
-        $loggedInUser->id         = $userRow["id"];
-        $loggedInUser->name       = $userRow["name"];
-        $loggedInUser->email      = $userRow["email"];
-        $loggedInUser->role       = $userRow["role"];
-        $loggedInUser->created_at = $userRow["created_at"];
+
+        $loggedInUser->id = $userRow['id'] ?? null;
+
+        $loggedInUser->name = $userRow['name'] ?? '';
+
+        $loggedInUser->email = $userRow['email'] ?? '';
+
+        $loggedInUser->role = $userRow['role'] ?? 'traveler';
+
+        $loggedInUser->created_at = $userRow['created_at'] ?? null;
     } else {
+
+        /*
+        |--------------------------------------------------------------------------
+        | Invalid Session Cleanup
+        |--------------------------------------------------------------------------
+        */
+
+        $_SESSION = [];
+
         session_destroy();
-        header("Location: index.php?action=login");
+
+        header('Location: index.php?action=login');
+
         exit;
     }
 }
 
-// ── Load Controllers
-require_once __DIR__ . "/../app/controllers/AuthenticationController.php";
-require_once __DIR__ . "/../app/controllers/TripController.php";
-require_once __DIR__ . "/../app/controllers/BookingController.php";
-require_once __DIR__ . "/../app/controllers/ReviewController.php";
+/*
+|--------------------------------------------------------------------------
+| Load Controllers
+|--------------------------------------------------------------------------
+*/
 
-require_once __DIR__ . "/../routes/web.php";
+require_once __DIR__ . '/../app/controllers/AuthenticationController.php';
 
+require_once __DIR__ . '/../app/controllers/TripController.php';
 
-    // ── Error Handling 
-    // Set to 'development' or 'production'
-    define('APP_ENV', 'development'); 
-        
-        if (APP_ENV === 'development') {
-            ini_set('display_errors', 1);
-            ini_set('display_startup_errors', 1);
-            error_reporting(E_ALL);
-        } else {
-            ini_set('display_errors', 0);
-            error_reporting(0);
-        }
+require_once __DIR__ . '/../app/controllers/BookingController.php';
+
+require_once __DIR__ . '/../app/controllers/ReviewController.php';
+
+require_once __DIR__ . '/../app/controllers/GuideController.php';
+
+/*
+|--------------------------------------------------------------------------
+| Load Routes
+|--------------------------------------------------------------------------
+*/
+
+require_once __DIR__ . '/../routes/web.php';

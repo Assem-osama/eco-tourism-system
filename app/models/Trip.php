@@ -14,4 +14,8 @@ class Trip
     public $sustainability_score;
     public $created_at;
     public $guide_bio; // For trip detail view
+    ///////////////////////////////
+    public $tags;
+    public $equipment_type;
+    public $equipment_total;
 }

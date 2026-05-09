@@ -1,7 +1,7 @@
 <?php
 
 $databaseHost = "localhost";
-$databaseName = "ecotourismdb";
+$databaseName = "ecotourismdb2";
 $databaseUsername = "root";
 $databasePassword = "";
 $databasePort = "3307";
@@ -17,4 +17,3 @@ try {
 } catch (PDOException $exception) {
     die("Database Connection Failed: " . $exception->getMessage());
 }
-?>

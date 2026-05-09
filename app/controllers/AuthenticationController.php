@@ -28,7 +28,23 @@ class AuthenticationController {
     }
 
     public function showDashboard($loggedInUser) {
+        if ($loggedInUser->role === "admin") {
+            header("Location: index.php?action=admin_dashboard");
+            exit;
+        } elseif ($loggedInUser->role === "guide") {
+            header("Location: index.php?action=guide_panel");
+            exit;
+        }
         require_once __DIR__ . "/../../views/dashboard/index.php";
+    }
+
+    public function showAdminDashboard($loggedInUser) {
+        // Fetch some admin stats
+        $userCount = $this->db->query("SELECT COUNT(*) FROM users")->fetchColumn();
+        $tripCount = $this->db->query("SELECT COUNT(*) FROM trips")->fetchColumn();
+        $bookingCount = $this->db->query("SELECT COUNT(*) FROM bookings")->fetchColumn();
+        
+        require_once __DIR__ . "/../../views/admin/dashboard.php";
     }
 
     public function handleLogin() {
@@ -56,7 +72,14 @@ class AuthenticationController {
         // Store ONLY the user ID in the session
         $_SESSION["user_id"] = $row["id"];
 
-        header("Location: index.php?action=dashboard");
+        // Redirect based on role
+        if ($row["role"] === "admin") {
+            header("Location: index.php?action=admin_dashboard");
+        } elseif ($row["role"] === "guide") {
+            header("Location: index.php?action=guide_panel");
+        } else {
+            header("Location: index.php?action=dashboard");
+        }
         exit;
     }
 
@@ -65,6 +88,13 @@ class AuthenticationController {
         $email           = trim($_POST["email"] ?? "");
         $password        = $_POST["password"] ?? "";
         $confirmPassword = $_POST["confirm_password"] ?? "";
+        $role            = $_POST["role"] ?? "tourist";
+
+        // Validate role
+        $allowedRoles = ["tourist", "guide", "admin"];
+        if (!in_array($role, $allowedRoles)) {
+            $role = "tourist";
+        }
 
         if (empty($name) || empty($email) || empty($password) || empty($confirmPassword)) {
             $this->redirectWithError("register", "Please fill in all fields.");
@@ -97,9 +127,16 @@ class AuthenticationController {
         $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
 
         $statement = $this->db->prepare(
-            "INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, 'tourist')"
+            "INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)"
         );
-        $statement->execute([$name, $email, $hashedPassword]);
+        $statement->execute([$name, $email, $hashedPassword, $role]);
+
+        // If guide, we might need to create a guide record as well
+        if ($role === "guide") {
+            $newUserId = $this->db->lastInsertId();
+            $guideStmt = $this->db->prepare("INSERT INTO guides (user_id, bio, sustainability_score) VALUES (?, '', 0)");
+            $guideStmt->execute([$newUserId]);
+        }
 
         header("Location: index.php?action=login&success=" . urlencode("Account created! Please log in."));
         exit;
