@@ -1,43 +1,83 @@
 <?php
 
-/*
-|--------------------------------------------------------------------------
-| Create Controller Instances
-|--------------------------------------------------------------------------
-*/
+//Eager Loading memory_overhead Lazy Loading new new new 
+//DRY (Don't Repeat Yourself) 
+//Route Grouping
 
-
-$authenticationController = new AuthenticationController($databaseConnection);
-$tripController = new TripController($databaseConnection);
-
-
-$bookingController = new BookingController($databaseConnection);
-
-$reviewController = new ReviewController($databaseConnection);
-
-$guideController = new GuideController($databaseConnection);
-
-/*
-|--------------------------------------------------------------------------
-| Current Action
-|--------------------------------------------------------------------------
-*/
+//Current Action
 
 $action = $_GET['action'] ?? 'login';
 
-/*
-|--------------------------------------------------------------------------
-| Route Dispatcher
-|--------------------------------------------------------------------------
-*/
+
+
+$authenticationController = null;
+$tripController = null;
+$bookingController = null;
+$reviewController = null;
+$guideController = null;
+
+$authActions = [
+    'login',
+    'login_submit',
+    'register',
+    'register_submit',
+    'logout',
+    'dashboard',
+    'admin_dashboard'
+];
+
+$tripActions = [
+    'trips',
+    'trip_detail',
+    'trip_create',
+    'trip_create_submit',
+    'carbon_offset',
+    'eco_score',
+    'indigenous_consent_check',
+    'leave_no_trace',
+    'sustainability_report',
+    'sustainability_report_global',
+    'guide_trips',
+    'optimized_route'
+];
+
+$bookingActions = [
+    'booking_create',
+    'booking_cancel',
+    'my_bookings'
+];
+
+$guideActions = [
+    'guide_panel',
+    'certificate_submit',
+    'language_verification_submit',
+    'trainee_shadow_approve',
+    'guide_profile',
+    'field_report',
+    'field_report_submit'
+];
+
+$reviewActions = [
+    'review_submit'
+];
+
+
+if (in_array($action, $authActions)) {
+    $authenticationController = new AuthenticationController($databaseConnection);
+} elseif (in_array($action, $tripActions)) {
+    $tripController = new TripController($databaseConnection);
+} elseif (in_array($action, $bookingActions)) {
+    $bookingController = new BookingController($databaseConnection);
+} elseif (in_array($action, $guideActions)) {
+    $guideController = new GuideController($databaseConnection);
+} elseif (in_array($action, $reviewActions)) {
+    $reviewController = new ReviewController($databaseConnection);
+}
+
 
 switch ($action) {
 
-    /*
-    |--------------------------------------------------------------------------
-    | Authentication
-    |--------------------------------------------------------------------------
-    */
+    // Authentication
 
     case 'login':
 
@@ -69,11 +109,8 @@ switch ($action) {
 
         break;
 
-    /*
-    |--------------------------------------------------------------------------
-    | Dashboard
-    |--------------------------------------------------------------------------
-    */
+
+    //Dashboard
 
     case 'dashboard':
 
@@ -91,11 +128,7 @@ switch ($action) {
 
         break;
 
-    /*
-    |--------------------------------------------------------------------------
-    | Trips
-    |--------------------------------------------------------------------------
-    */
+    // Trips
 
     case 'trips':
 
@@ -186,11 +219,7 @@ switch ($action) {
 
         break;
 
-    /*
-    |--------------------------------------------------------------------------
-    | Bookings
-    |--------------------------------------------------------------------------
-    */
+    // Bookings
 
     case 'booking_create':
 
@@ -216,11 +245,8 @@ switch ($action) {
 
         break;
 
-    /*
-    |--------------------------------------------------------------------------
-    | Reviews
-    |--------------------------------------------------------------------------
-    */
+    // Reviews
+
 
     case 'review_submit':
 
@@ -230,11 +256,8 @@ switch ($action) {
 
         break;
 
-    /*
-    |--------------------------------------------------------------------------
-    | Guide
-    |--------------------------------------------------------------------------
-    */
+
+    // Guide
 
     case 'guide_panel':
 
@@ -287,13 +310,7 @@ switch ($action) {
 
         break;
 
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | Default Route
-    |--------------------------------------------------------------------------
-    */
+    // Default Route    
 
     default:
 

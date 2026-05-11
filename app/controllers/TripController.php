@@ -9,9 +9,7 @@ class TripController
         $this->db = $databaseConnection;
     }
 
-    // =========================================================================
     // Trip list & detail
-    // =========================================================================
 
     public function showTripList($loggedInUser)
     {
@@ -157,9 +155,7 @@ class TripController
         require_once __DIR__ . "/../../views/trips/detail.php";
     }
 
-    // =========================================================================
     // Create trip
-    // =========================================================================
 
     public function showCreateForm($loggedInUser)
     {
@@ -210,7 +206,6 @@ class TripController
 
         $guideId = $guideRow ? $guideRow["id"] : null;
 
-        // FIX: SQL now includes tags, equipment_type, equipment_total (11 columns = 11 values)
         $statement = $this->db->prepare(
             "INSERT INTO trips
     (
@@ -248,13 +243,10 @@ class TripController
         exit;
     }
 
-    // =========================================================================
     // Translation helper
-    // =========================================================================
 
     public function translationNeeded($tripId, $updatedLanguage)
     {
-        // FIX: moved SQL comment to its own line so -- does not eat the last condition
         $updateStatement = $this->db->prepare(
             "UPDATE trip_translations
              SET translation_needed = 1
@@ -266,9 +258,7 @@ class TripController
         return $updateStatement->execute([$tripId, $updatedLanguage]);
     }
 
-    // =========================================================================
     // Carbon offset
-    // =========================================================================
 
     public function showCarbonOffset($user)
     {
@@ -316,9 +306,7 @@ class TripController
         ];
     }
 
-    // =========================================================================
     // Indigenous consent check
-    // =========================================================================
 
     public function checkConsent($user)
     {
@@ -342,7 +330,7 @@ class TripController
         }
 
         if (!$tripRow["is_protected_area"]) {
-            return; // Not a protected area — no consent needed
+            return; // Not a protected area, no consent needed
         }
 
         if ($tripRow["indigenous_consent_status"] !== "approved") {
@@ -351,9 +339,7 @@ class TripController
         }
     }
 
-    // =========================================================================
     // Leave No Trace PDF
-    // =========================================================================
 
     public function downloadLeaveNoTrace($user)
     {
@@ -417,17 +403,13 @@ class TripController
 
         $fileName = "leave_no_trace_" . $loggedInUser->id . "_" . $tripId . ".pdf";
 
-        // FIX: was bare DIR (undefined constant) — must be __DIR__
         $storagePath = __DIR__ . "/../../storage/" . $fileName;
         file_put_contents($storagePath, $content);
 
         return $fileName;
     }
 
-    // =========================================================================
     // Eco-Leaf score
-    // =========================================================================
-
 
     public function showEcoScore($user)
     {
@@ -453,7 +435,6 @@ class TripController
             return false;
         }
 
-        // FIX: guard against calculate_carbon_offset returning false
         $carbonData = $this->calculate_carbon_offset($tripId);
         $carbonCost = ($carbonData !== false) ? (float) $carbonData["carbon_cost"] : 25.0;
         $carbonScore = max(0, 100 - ($carbonCost * 2));
@@ -480,9 +461,7 @@ class TripController
         return $ecoLeafScore;
     }
 
-    // =========================================================================
     // Global sustainability report
-    // =========================================================================
 
     public function showGlobalSustainabilityReport($user)
     {
@@ -545,9 +524,7 @@ class TripController
         return $statement->fetchAll();
     }
 
-    // =========================================================================
     // Private helpers
-    // =========================================================================
 
 
     public function showOptimizedRoute($user)

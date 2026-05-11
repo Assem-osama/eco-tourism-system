@@ -44,7 +44,6 @@ class ReviewController
             exit;
         }
 
-        // Insert the review
         $insertStatement = $this->db->prepare(
             "INSERT INTO reviews (user_id, trip_id, rating, eco_rating, comment)
              VALUES (?, ?, ?, ?, ?)"

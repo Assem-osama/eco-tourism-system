@@ -52,7 +52,6 @@ class GuideController
         require_once __DIR__ . '/../../views/guide/panel.php';
     }
     // Certificate upload / renewal
-    // =========================================================================
 
     public function upload_or_renew_certificate($loggedInUser)
     {

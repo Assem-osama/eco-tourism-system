@@ -2,7 +2,6 @@
 
 function require_login()
 {
-    // Check for user_id instead of full object
     if (empty($_SESSION["user_id"])) {
         header("Location: index.php?action=login");
         exit;
