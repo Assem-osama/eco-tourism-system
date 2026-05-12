@@ -37,8 +37,8 @@ require_once __DIR__ . "/../../views/partials/nav.php";
                     
                     <div class="trip-actions">
                         <a href="index.php?action=trip_detail&id=<?= $trip->id ?>" class="btn btn-sm btn-outline">View Details</a>
+                        <a href="index.php?action=trip_edit&id=<?= $trip->id ?>" class="btn btn-sm btn-outline">Edit Trip</a>
                         <a href="index.php?action=field_report&trip_id=<?= $trip->id ?>" class="btn btn-sm btn-outline">Field Report</a>
-                        <!-- Add Edit/Delete buttons if functionality exists -->
                     </div>
                 </div>
             <?php endforeach; ?>

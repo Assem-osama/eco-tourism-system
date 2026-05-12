@@ -121,7 +121,7 @@ $reviews = $reviews ?? [];
 
                 <form
                     method="POST"
-                    action="index.php?action=booking_create"
+                    action="index.php?action=checkout"
                     class="booking-form">
 
                     <input

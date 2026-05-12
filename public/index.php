@@ -39,6 +39,8 @@ require_once __DIR__ . '/../app/models/Booking.php';
 
 require_once __DIR__ . '/../app/models/Review.php';
 
+require_once __DIR__ . '/../app/models/Payment.php';
+
 
 // Database Connection
 
@@ -50,6 +52,7 @@ require_once __DIR__ . '/../config/database.php';
 
 
 require_once __DIR__ . '/../app/helpers/auth_guard.php';
+require_once __DIR__ . '/../app/helpers/logger.php';
 
 
 // Global Logged-In User
@@ -110,6 +113,8 @@ require_once __DIR__ . '/../app/controllers/TripController.php';
 require_once __DIR__ . '/../app/controllers/BookingController.php';
 
 require_once __DIR__ . '/../app/controllers/ReviewController.php';
+
+require_once __DIR__ . '/../app/controllers/PaymentController.php';
 
 require_once __DIR__ . '/../app/controllers/GuideController.php';
 

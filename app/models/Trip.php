@@ -18,4 +18,5 @@ class Trip
     public $tags;
     public $equipment_type;
     public $equipment_total;
+    public $status;
 }

@@ -41,10 +41,24 @@ class AuthenticationController {
     public function showAdminDashboard($loggedInUser) {
         // Fetch some admin stats
         $userCount = $this->db->query("SELECT COUNT(*) FROM users")->fetchColumn();
-        $tripCount = $this->db->query("SELECT COUNT(*) FROM trips")->fetchColumn();
+        $guideCount = $this->db->query("SELECT COUNT(*) FROM users WHERE role = 'guide'")->fetchColumn();
+        $tripCount = $this->db->query("SELECT COUNT(*) FROM trips WHERE status = 'approved'")->fetchColumn();
         $bookingCount = $this->db->query("SELECT COUNT(*) FROM bookings")->fetchColumn();
         
         require_once __DIR__ . "/../../views/admin/dashboard.php";
+    }
+
+    public function showAdminLogs($loggedInUser) {
+        $statement = $this->db->query(
+            "SELECT audit_logs.*, users.name AS user_name 
+             FROM audit_logs 
+             LEFT JOIN users ON audit_logs.user_id = users.id 
+             ORDER BY created_at DESC 
+             LIMIT 100"
+        );
+        $logs = $statement->fetchAll();
+        
+        require_once __DIR__ . "/../../views/admin/logs.php";
     }
 
     public function handleLogin() {
@@ -64,6 +78,11 @@ class AuthenticationController {
 
         if (!$row || !password_verify($password, $row["password"])) {
             $this->redirectWithError("login", "Invalid email or password.");
+            return;
+        }
+
+        if ($row['account_status'] === 'blacklisted') {
+            $this->redirectWithError("login", "Your account has been suspended due to repeated violations of our sustainability standards.");
             return;
         }
 

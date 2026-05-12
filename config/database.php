@@ -1,10 +1,10 @@
 <?php
 
 $databaseHost = "localhost";
-$databaseName = "ecotourismdb2";
+$databaseName = "eco_tourism_final";
 $databaseUsername = "root";
 $databasePassword = "";
-$databasePort = "3307";
+$databasePort = "3306";
 
 try {
     $databaseConnection = new PDO(

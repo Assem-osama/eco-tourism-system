@@ -16,6 +16,17 @@ $pendingShadowRequests = $pendingShadowRequests ?? [];
         <p class="form-hint">Manage your sustainable adventures, monitor your impact, and mentor the next generation of guides.</p>
     </div>
 
+    <?php if (($guideData['status'] ?? 'pending') !== 'approved'): ?>
+        <div class="empty-state animate-fade-in" style="margin-top: 40px;">
+            <div class="empty-icon">⏳</div>
+            <h3>Account Pending Approval</h3>
+            <p>Welcome! Before you can start creating trips and managing bookings, you must complete your Guide Profile and have it approved by an Administrator.</p>
+            <p>Please click below to upload your certificates and fill in your details.</p>
+            <br>
+            <a href="index.php?action=guide_profile" class="btn btn-primary">Go to My Guide Profile</a>
+        </div>
+    <?php else: ?>
+
     <!-- Metrics Grid -->
     <div class="metrics-grid animate-fade-in">
         <div class="metric-card">
@@ -126,6 +137,8 @@ $pendingShadowRequests = $pendingShadowRequests ?? [];
         </div>
 
     </div>
+    
+    <?php endif; ?>
 
 </main>
 

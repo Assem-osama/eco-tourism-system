@@ -25,11 +25,11 @@ require_once __DIR__ . "/../../views/partials/nav.php";
             </div>
             <div class="card-body">
                 <p class="form-hint">Upload or renew your official eco-tourism guide certificate.</p>
-                <form method="POST" action="index.php?action=certificate_submit">
+                <form method="POST" action="index.php?action=certificate_submit" enctype="multipart/form-data">
                     <input type="hidden" name="guide_id" value="<?= (int) ($guide->id ?? 0) ?>">
                     <div class="form-group">
-                        <label>Certificate Filename *</label>
-                        <input type="text" name="certificate_file" required placeholder="e.g. eco_cert_2024.pdf">
+                        <label>Certificate File *</label>
+                        <input type="file" name="certificate_file" accept=".pdf,.jpg,.jpeg,.png" required>
                         <p class="form-hint">Uploading a new version will flag existing translations for update.</p>
                     </div>
                     <button type="submit" class="btn btn-primary">
@@ -46,7 +46,7 @@ require_once __DIR__ . "/../../views/partials/nav.php";
             </div>
             <div class="card-body">
                 <p class="form-hint">Submit languages for review to display them on your public profile.</p>
-                <form method="POST" action="index.php?action=language_verification_submit">
+                <form method="POST" action="index.php?action=language_verification_submit" enctype="multipart/form-data">
                     <div class="form-group">
                         <label>Language *</label>
                         <input type="text" name="language" required placeholder="e.g. Arabic, French, Spanish">
@@ -60,8 +60,8 @@ require_once __DIR__ . "/../../views/partials/nav.php";
                         </select>
                     </div>
                     <div id="proofFileSection" class="form-group">
-                        <label>Proof File (filename) *</label>
-                        <input type="text" name="proof_file" id="proofFileInput" placeholder="e.g. arabic_cert.pdf">
+                        <label>Proof File *</label>
+                        <input type="file" name="proof_file" id="proofFileInput" accept=".pdf,.jpg,.jpeg,.png">
                     </div>
                     <button type="submit" class="btn btn-primary">Submit for Review</button>
                 </form>

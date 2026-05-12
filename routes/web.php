@@ -15,6 +15,7 @@ $tripController = null;
 $bookingController = null;
 $reviewController = null;
 $guideController = null;
+$paymentController = null;
 
 $authActions = [
     'login',
@@ -23,7 +24,8 @@ $authActions = [
     'register_submit',
     'logout',
     'dashboard',
-    'admin_dashboard'
+    'admin_dashboard',
+    'admin_logs'
 ];
 
 $tripActions = [
@@ -38,13 +40,24 @@ $tripActions = [
     'sustainability_report',
     'sustainability_report_global',
     'guide_trips',
-    'optimized_route'
+    'optimized_route',
+    'admin_trips',
+    'admin_trip_approve',
+    'admin_trip_reject',
+    'trip_edit',
+    'trip_edit_submit'
 ];
 
 $bookingActions = [
     'booking_create',
     'booking_cancel',
-    'my_bookings'
+    'my_bookings',
+    'checkout',
+    'waitlist_join'
+];
+
+$paymentActions = [
+    'process_checkout'
 ];
 
 $guideActions = [
@@ -54,7 +67,11 @@ $guideActions = [
     'trainee_shadow_approve',
     'guide_profile',
     'field_report',
-    'field_report_submit'
+    'field_report_submit',
+    'admin_issue_strike',
+    'admin_reset_strikes',
+    'admin_guides_vetting',
+    'admin_guide_approve'
 ];
 
 $reviewActions = [
@@ -68,6 +85,8 @@ if (in_array($action, $authActions)) {
     $tripController = new TripController($databaseConnection);
 } elseif (in_array($action, $bookingActions)) {
     $bookingController = new BookingController($databaseConnection);
+} elseif (in_array($action, $paymentActions)) {
+    $paymentController = new PaymentController($databaseConnection);
 } elseif (in_array($action, $guideActions)) {
     $guideController = new GuideController($databaseConnection);
 } elseif (in_array($action, $reviewActions)) {
@@ -127,6 +146,14 @@ switch ($action) {
         $authenticationController->showAdminDashboard($loggedInUser);
 
         break;
+        
+    case 'admin_logs':
+        
+        require_admin();
+        
+        $authenticationController->showAdminLogs($loggedInUser);
+        
+        break;
 
     // Trips
 
@@ -159,6 +186,22 @@ switch ($action) {
         require_guide_or_admin();
 
         $tripController->handleCreate($loggedInUser);
+
+        break;
+
+    case 'trip_edit':
+
+        require_guide_or_admin();
+
+        $tripController->showEditForm($loggedInUser);
+
+        break;
+
+    case 'trip_edit_submit':
+
+        require_guide_or_admin();
+
+        $tripController->handleEdit($loggedInUser);
 
         break;
 
@@ -219,6 +262,23 @@ switch ($action) {
 
         break;
 
+    // Admin Vetting
+
+    case 'admin_trips':
+        require_admin();
+        $tripController->showAdminTrips($loggedInUser);
+        break;
+
+    case 'admin_trip_approve':
+        require_admin();
+        $tripController->approveTrip($loggedInUser);
+        break;
+
+    case 'admin_trip_reject':
+        require_admin();
+        $tripController->rejectTrip($loggedInUser);
+        break;
+
     // Bookings
 
     case 'booking_create':
@@ -242,6 +302,30 @@ switch ($action) {
         require_login();
 
         $bookingController->showMyBookings($loggedInUser);
+
+        break;
+
+    case 'checkout':
+
+        require_login();
+
+        $bookingController->showCheckout($loggedInUser);
+
+        break;
+
+    case 'process_checkout':
+
+        require_login();
+
+        $paymentController->processCheckout($loggedInUser);
+
+        break;
+
+    case 'waitlist_join':
+
+        require_login();
+
+        $bookingController->joinWaitlist($loggedInUser);
 
         break;
 
@@ -308,6 +392,26 @@ switch ($action) {
 
         $guideController->handleFieldReport($loggedInUser);
 
+        break;
+
+    case 'admin_issue_strike':
+        require_admin();
+        $guideController->issueStrike($loggedInUser);
+        break;
+
+    case 'admin_reset_strikes':
+        require_admin();
+        $guideController->resetStrikes($loggedInUser);
+        break;
+
+    case 'admin_guides_vetting':
+        require_admin();
+        $guideController->showAdminGuidesVetting($loggedInUser);
+        break;
+
+    case 'admin_guide_approve':
+        require_admin();
+        $guideController->approveGuide($loggedInUser);
         break;
 
     // Default Route    

@@ -56,7 +56,12 @@ class GuideController
     public function upload_or_renew_certificate($loggedInUser)
     {
         $guideId  = (int) ($_POST["guide_id"] ?? 0);
-        $fileName = trim($_POST["certificate_file"] ?? "");
+        $fileName = "";
+        if (!empty($_FILES["certificate_file"]["name"])) {
+            $fileName = time() . "_" . basename($_FILES["certificate_file"]["name"]);
+            $targetPath = __DIR__ . "/../../public/uploads/" . $fileName;
+            move_uploaded_file($_FILES["certificate_file"]["tmp_name"], $targetPath);
+        }
 
         if ($guideId <= 0 || empty($fileName)) {
             header("Location: index.php?action=dashboard&error=" . urlencode("Invalid certificate data."));
@@ -112,11 +117,11 @@ class GuideController
             $insertStatement->execute([$guideId, $fileName, $translationFlag]);
         }
 
-        // Flag all non-English certificate entries for this guide as needing translation
+        // Flag all certificates for this guide as needing translation/review
         $translationStatement = $this->db->prepare(
             "UPDATE certificates
              SET translation_needed = 1
-             WHERE guide_id = ? AND language != 'en'"
+             WHERE guide_id = ?"
         );
         $translationStatement->execute([$guideId]);
 
@@ -128,7 +133,13 @@ class GuideController
     {
         $language           = trim($_POST["language"] ?? "");
         $verificationMethod = trim($_POST["verification_method"] ?? "certificate");
-        $proofFile          = trim($_POST["proof_file"] ?? "");
+        
+        $proofFile = "";
+        if ($verificationMethod === "certificate" && !empty($_FILES["proof_file"]["name"])) {
+            $proofFile = time() . "_" . basename($_FILES["proof_file"]["name"]);
+            $targetPath = __DIR__ . "/../../public/uploads/" . $proofFile;
+            move_uploaded_file($_FILES["proof_file"]["tmp_name"], $targetPath);
+        }
 
         if (empty($language) || empty($verificationMethod)) {
             header("Location: index.php?action=guide_profile&error=" . urlencode("Please fill in all language verification fields."));
@@ -327,5 +338,80 @@ class GuideController
         $pendingShadowRequests = [];
 
         require_once __DIR__ . "/../../views/guide/profile.php";
+    }
+
+    public function issueStrike($loggedInUser)
+    {
+        $userId = (int) ($_GET["id"] ?? 0);
+        if ($userId <= 0) {
+            header("Location: index.php?action=admin_dashboard&error=" . urlencode("Invalid user ID."));
+            exit;
+        }
+
+        // Increment strike
+        $statement = $this->db->prepare("UPDATE users SET strikes_count = strikes_count + 1 WHERE id = ?");
+        $statement->execute([$userId]);
+
+        // Check if >= 3 and blacklist
+        $checkStmt = $this->db->prepare("SELECT strikes_count, name FROM users WHERE id = ?");
+        $checkStmt->execute([$userId]);
+        $userRow = $checkStmt->fetch();
+
+        if ($userRow && $userRow['strikes_count'] >= 3) {
+            $blacklistStmt = $this->db->prepare("UPDATE users SET account_status = 'blacklisted' WHERE id = ?");
+            $blacklistStmt->execute([$userId]);
+            createLog($this->db, $loggedInUser->id, "Guide Blacklisted", "User {$userRow['name']} reached 3 strikes and was blacklisted.", "users", $userId);
+            header("Location: index.php?action=admin_dashboard&success=" . urlencode("User has been issued a strike and is now blacklisted."));
+            exit;
+        }
+
+        createLog($this->db, $loggedInUser->id, "Issued Strike", "Issued a strike to User {$userRow['name']}. Total strikes: {$userRow['strikes_count']}", "users", $userId);
+        header("Location: index.php?action=admin_dashboard&success=" . urlencode("Strike successfully issued to the user."));
+        exit;
+    }
+
+    public function resetStrikes($loggedInUser)
+    {
+        $userId = (int) ($_GET["id"] ?? 0);
+        if ($userId > 0) {
+            $statement = $this->db->prepare("UPDATE users SET strikes_count = 0, account_status = 'active' WHERE id = ?");
+            $statement->execute([$userId]);
+
+            $checkStmt = $this->db->prepare("SELECT name FROM users WHERE id = ?");
+            $checkStmt->execute([$userId]);
+            $userRow = $checkStmt->fetch();
+            
+            createLog($this->db, $loggedInUser->id, "Reset Strikes", "Reset strikes for User {$userRow['name']}.", "users", $userId);
+        }
+        header("Location: index.php?action=admin_dashboard&success=" . urlencode("Strikes reset successfully."));
+        exit;
+    }
+
+    public function showAdminGuidesVetting($loggedInUser)
+    {
+        $statement = $this->db->prepare(
+            "SELECT guides.*, users.name, users.email,
+             (SELECT certificate_file FROM certificates WHERE guide_id = guides.id ORDER BY created_at DESC LIMIT 1) AS cert_file,
+             (SELECT proof_file FROM guide_languages WHERE guide_id = guides.id ORDER BY id DESC LIMIT 1) AS proof_file
+             FROM guides 
+             JOIN users ON guides.user_id = users.id 
+             WHERE guides.status = 'pending'"
+        );
+        $statement->execute();
+        $guides = $statement->fetchAll();
+
+        require_once __DIR__ . "/../../views/admin/guide_vetting.php";
+    }
+
+    public function approveGuide($loggedInUser)
+    {
+        $guideId = (int) ($_GET["id"] ?? 0);
+        if ($guideId > 0) {
+            $statement = $this->db->prepare("UPDATE guides SET status = 'approved' WHERE id = ?");
+            $statement->execute([$guideId]);
+            createLog($this->db, $loggedInUser->id, "Approved Guide", "Approved guide profile with ID: $guideId", "guides", $guideId);
+        }
+        header("Location: index.php?action=admin_guides_vetting&success=" . urlencode("Guide approved successfully."));
+        exit;
     }
 }

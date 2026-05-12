@@ -18,6 +18,7 @@ class TripController
              FROM trips
              JOIN guides ON trips.guide_id = guides.id
              JOIN users  ON guides.user_id = users.id
+             WHERE trips.status = 'approved'
              ORDER BY trips.created_at DESC"
         );
         $statement->execute();
@@ -41,6 +42,7 @@ class TripController
             $trip->equipment_type       = $row["equipment_type"];
             $trip->equipment_total      = $row["equipment_total"];
             $trip->guide_name           = $row["guide_name"];
+            $trip->status               = $row["status"] ?? 'pending';
             $trips[] = $trip;
         }
 
@@ -91,6 +93,7 @@ class TripController
             $trip->equipment_type       = $row["equipment_type"];
             $trip->equipment_total      = $row["equipment_total"];
             $trip->guide_name           = $row["guide_name"];
+            $trip->status               = $row["status"] ?? 'pending';
             $trips[] = $trip;
         }
 
@@ -194,13 +197,18 @@ class TripController
         }
 
         $guideStatement = $this->db->prepare(
-            "SELECT id FROM guides WHERE user_id = ? LIMIT 1"
+            "SELECT id, status FROM guides WHERE user_id = ? LIMIT 1"
         );
         $guideStatement->execute([$loggedInUser->id]);
         $guideRow = $guideStatement->fetch();
 
         if (!$guideRow && $loggedInUser->role !== "admin") {
             header("Location: index.php?action=dashboard&error=" . urlencode("You do not have a guide profile yet."));
+            exit;
+        }
+
+        if ($loggedInUser->role !== "admin" && $guideRow["status"] !== "approved") {
+            header("Location: index.php?action=guide_panel&error=" . urlencode("Your guide profile is pending approval. You cannot create trips yet."));
             exit;
         }
 
@@ -219,9 +227,10 @@ class TripController
         available_to,
         tags,
         equipment_type,
-        equipment_total
+        equipment_total,
+        status
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')"
         );
         $statement->execute([
             $guideId,
@@ -239,7 +248,162 @@ class TripController
         $newTripId = (int) $this->db->lastInsertId();
         $this->calculateEcoLeafScore($newTripId);
 
-        header("Location: index.php?action=trips&success=" . urlencode("Trip created successfully!"));
+        header("Location: index.php?action=guide_trips&success=" . urlencode("Your trip has been submitted and is awaiting admin approval."));
+        exit;
+    }
+
+    // Edit trip
+
+    public function showEditForm($loggedInUser)
+    {
+        $tripId = (int)($_GET['id'] ?? 0);
+        $errorMessage = $_GET["error"] ?? "";
+        
+        $statement = $this->db->prepare("SELECT * FROM trips WHERE id = ?");
+        $statement->execute([$tripId]);
+        $trip = $statement->fetch();
+
+        if (!$trip) {
+            header("Location: index.php?action=guide_trips&error=" . urlencode("Trip not found."));
+            exit;
+        }
+
+        // Verify guide ownership (or admin)
+        $guideStatement = $this->db->prepare("SELECT id FROM guides WHERE user_id = ?");
+        $guideStatement->execute([$loggedInUser->id]);
+        $guideRow = $guideStatement->fetch();
+
+        if ($loggedInUser->role !== 'admin' && (!$guideRow || $trip['guide_id'] != $guideRow['id'])) {
+            header("Location: index.php?action=guide_trips&error=" . urlencode("Unauthorized to edit this trip."));
+            exit;
+        }
+
+        require_once __DIR__ . "/../../views/trips/edit.php";
+    }
+
+    public function handleEdit($loggedInUser)
+    {
+        $tripId = (int)($_POST['id'] ?? 0);
+        $title          = trim($_POST["title"] ?? "");
+        $description    = trim($_POST["description"] ?? "");
+        $location       = trim($_POST["location"] ?? "");
+        $price          = $_POST["price"] ?? "";
+        $capacity       = $_POST["capacity"] ?? "";
+        $availableFrom  = $_POST["available_from"] ?? "";
+        $availableTo    = $_POST["available_to"] ?? "";
+        $equipmentType  = trim($_POST["equipment_type"] ?? "");
+        $equipmentTotal = (int) ($_POST["equipment_total"] ?? 0);
+
+        if ($tripId <= 0 || empty($title) || empty($location) || empty($price) || empty($capacity) || empty($availableFrom) || empty($availableTo)) {
+            header("Location: index.php?action=trip_edit&id=$tripId&error=" . urlencode("Please fill in all required fields."));
+            exit;
+        }
+
+        if ((float) $price <= 0) {
+            header("Location: index.php?action=trip_edit&id=$tripId&error=" . urlencode("Price must be greater than zero."));
+            exit;
+        }
+
+        // Verify ownership
+        $statement = $this->db->prepare("SELECT * FROM trips WHERE id = ?");
+        $statement->execute([$tripId]);
+        $trip = $statement->fetch();
+
+        $guideStatement = $this->db->prepare("SELECT id FROM guides WHERE user_id = ?");
+        $guideStatement->execute([$loggedInUser->id]);
+        $guideRow = $guideStatement->fetch();
+
+        if ($loggedInUser->role !== 'admin' && (!$trip || !$guideRow || $trip['guide_id'] != $guideRow['id'])) {
+            header("Location: index.php?action=guide_trips&error=" . urlencode("Unauthorized to edit this trip."));
+            exit;
+        }
+
+        $updateStatement = $this->db->prepare(
+            "UPDATE trips SET 
+                title = ?, description = ?, location = ?, price = ?, 
+                capacity = ?, available_from = ?, available_to = ?, 
+                equipment_type = ?, equipment_total = ?, status = 'pending'
+             WHERE id = ?"
+        );
+        $updateStatement->execute([
+            $title, $description, $location, (float) $price,
+            (int) $capacity, $availableFrom, $availableTo,
+            $equipmentType, (int) $equipmentTotal, $tripId
+        ]);
+
+        if ((float)$trip['price'] !== (float)$price) {
+            $desc = "Price changed from $" . number_format($trip['price'], 2) . " to $" . number_format($price, 2);
+            createLog($this->db, $loggedInUser->id, "Updated Price", $desc, "trips", $tripId);
+        } else {
+            createLog($this->db, $loggedInUser->id, "Updated Trip Details", "Updated basic details for trip '{$title}'", "trips", $tripId);
+        }
+
+        header("Location: index.php?action=guide_trips&success=" . urlencode("Trip updated successfully and is awaiting re-approval."));
+        exit;
+    }
+
+
+    // Admin Vetting
+    
+    public function showAdminTrips($loggedInUser)
+    {
+        $statement = $this->db->prepare(
+            "SELECT trips.*, users.name AS guide_name
+             FROM trips
+             JOIN guides ON trips.guide_id = guides.id
+             JOIN users  ON guides.user_id = users.id
+             WHERE trips.status = 'pending'
+             ORDER BY trips.created_at DESC"
+        );
+        $statement->execute();
+        $tripRows = $statement->fetchAll();
+
+        $trips = [];
+        foreach ($tripRows as $row) {
+            $trip                       = new Trip();
+            $trip->id                   = $row["id"];
+            $trip->guide_id             = $row["guide_id"];
+            $trip->title                = $row["title"];
+            $trip->description          = $row["description"];
+            $trip->location             = $row["location"];
+            $trip->price                = $row["price"];
+            $trip->capacity             = $row["capacity"];
+            $trip->available_from       = $row["available_from"];
+            $trip->available_to         = $row["available_to"];
+            $trip->sustainability_score = $row["sustainability_score"];
+            $trip->created_at           = $row["created_at"];
+            $trip->tags                 = $row["tags"] ?? null;
+            $trip->equipment_type       = $row["equipment_type"];
+            $trip->equipment_total      = $row["equipment_total"];
+            $trip->guide_name           = $row["guide_name"];
+            $trip->status               = $row["status"] ?? 'pending';
+            $trips[] = $trip;
+        }
+
+        require_once __DIR__ . "/../../views/admin/vetting_dashboard.php";
+    }
+
+    public function approveTrip($loggedInUser)
+    {
+        $tripId = (int) ($_GET["id"] ?? 0);
+        if ($tripId > 0) {
+            $statement = $this->db->prepare("UPDATE trips SET status = 'approved' WHERE id = ?");
+            $statement->execute([$tripId]);
+            createLog($this->db, $loggedInUser->id, "Approved Trip", "Approved trip with ID: $tripId", "trips", $tripId);
+        }
+        header("Location: index.php?action=admin_trips&success=" . urlencode("Trip approved successfully."));
+        exit;
+    }
+
+    public function rejectTrip($loggedInUser)
+    {
+        $tripId = (int) ($_GET["id"] ?? 0);
+        if ($tripId > 0) {
+            $statement = $this->db->prepare("UPDATE trips SET status = 'rejected' WHERE id = ?");
+            $statement->execute([$tripId]);
+            createLog($this->db, $loggedInUser->id, "Rejected Trip", "Rejected trip with ID: $tripId", "trips", $tripId);
+        }
+        header("Location: index.php?action=admin_trips&success=" . urlencode("Trip rejected successfully."));
         exit;
     }
 
